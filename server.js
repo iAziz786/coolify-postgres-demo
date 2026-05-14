@@ -1,15 +1,15 @@
 const express = require('express');
-const { Pool } = require('pg');
+const postgres = require('postgres');
 
 const app = express();
 app.use(express.json());
 
-// Database connection
-const pool = new Pool({
+// Database connection using postgres.js (Bun-compatible)
+const sql = postgres({
   host: process.env.DB_HOST,
-  port: process.env.DB_PORT || 5432,
+  port: parseInt(process.env.DB_PORT || '5432'),
   database: process.env.DB_NAME,
-  user: process.env.DB_USER,
+  username: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
 });
 
@@ -26,11 +26,11 @@ app.get('/deploy', async (req, res) => {
 // Health check
 app.get('/', async (req, res) => {
   try {
-    const result = await pool.query('SELECT version()');
+    const result = await sql`SELECT version()`;
     res.json({
       status: 'connected',
       database: 'PostgreSQL',
-      version: result.rows[0].version,
+      version: result[0].version,
       timestamp: new Date().toISOString()
     });
   } catch (err) {
@@ -45,14 +45,14 @@ app.get('/', async (req, res) => {
 // Initialize todos table
 app.post('/init', async (req, res) => {
   try {
-    await pool.query(`
+    await sql`
       CREATE TABLE IF NOT EXISTS todos (
         id SERIAL PRIMARY KEY,
         title VARCHAR(255) NOT NULL,
         completed BOOLEAN DEFAULT false,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
-    `);
+    `;
     res.json({ message: 'Table created successfully' });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -62,8 +62,8 @@ app.post('/init', async (req, res) => {
 // Get all todos
 app.get('/todos', async (req, res) => {
   try {
-    const result = await pool.query('SELECT * FROM todos ORDER BY created_at DESC');
-    res.json(result.rows);
+    const todos = await sql`SELECT * FROM todos ORDER BY created_at DESC`;
+    res.json(todos);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -73,11 +73,10 @@ app.get('/todos', async (req, res) => {
 app.post('/todos', async (req, res) => {
   try {
     const { title } = req.body;
-    const result = await pool.query(
-      'INSERT INTO todos (title) VALUES ($1) RETURNING *',
-      [title]
-    );
-    res.status(201).json(result.rows[0]);
+    const result = await sql`
+      INSERT INTO todos (title) VALUES (${title}) RETURNING *
+    `;
+    res.status(201).json(result[0]);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
