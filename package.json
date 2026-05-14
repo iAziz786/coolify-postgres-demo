@@ -4,8 +4,8 @@
   "description": "Demo backend connecting to PostgreSQL on Coolify",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js",
-    "dev": "node server.js"
+    "start": "bun server.js",
+    "dev": "bun server.js"
   },
   "dependencies": {
     "express": "^4.18.2",

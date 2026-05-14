@@ -4,7 +4,7 @@ const { Pool } = require('pg');
 const app = express();
 app.use(express.json());
 
-// Database connection - ALL values must come from environment variables
+// Database connection
 const pool = new Pool({
   host: process.env.DB_HOST,
   port: process.env.DB_PORT || 5432,
@@ -13,7 +13,17 @@ const pool = new Pool({
   password: process.env.DB_PASSWORD,
 });
 
-// Health check endpoint
+// Deploy confirmation endpoint
+app.get('/deploy', async (req, res) => {
+  res.json({
+    message: 'Auto-deploy works!',
+    runtime: 'Bun',
+    deployed_at: new Date().toISOString(),
+    commit: process.env.SOURCE_COMMIT || 'unknown'
+  });
+});
+
+// Health check
 app.get('/', async (req, res) => {
   try {
     const result = await pool.query('SELECT version()');
