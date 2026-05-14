@@ -1,17 +1,21 @@
 const express = require('express');
-const postgres = require('postgres');
+
+let sql;
+
+// Initialize database connection using async import for ESM compatibility with Bun
+async function initDb() {
+  const { default: postgres } = await import('postgres');
+  sql = postgres({
+    host: process.env.DB_HOST,
+    port: parseInt(process.env.DB_PORT || '5432'),
+    database: process.env.DB_NAME,
+    username: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+  });
+}
 
 const app = express();
 app.use(express.json());
-
-// Database connection using postgres.js (Bun-compatible)
-const sql = postgres({
-  host: process.env.DB_HOST,
-  port: parseInt(process.env.DB_PORT || '5432'),
-  database: process.env.DB_NAME,
-  username: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-});
 
 // Deploy confirmation endpoint
 app.get('/deploy', async (req, res) => {
@@ -83,6 +87,13 @@ app.post('/todos', async (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Server running on port ${PORT}`);
+
+// Initialize DB then start listening
+initDb().then(() => {
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`Server running on port ${PORT}`);
+  });
+}).catch((err) => {
+  console.error('Failed to initialize DB:', err);
+  process.exit(1);
 });
